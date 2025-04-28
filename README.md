@@ -1,6 +1,6 @@
 # Autoencoder CNN Layer
 ## What does this project do
-This project implements an Autoencoder with a single encoder and decoder layer for educational purposes. The training procedure uses finite differences to compute the gradients for simplicity.
+This project implements an Autoencoder with a single encoder and decoder layer using Cuda kernels for educational purposes. The training procedure uses finite differences to compute the gradients for simplicity.
 
 ## How to build and run
 1. Clone the repo and change into the cloned directory
