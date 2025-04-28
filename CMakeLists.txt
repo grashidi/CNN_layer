@@ -48,7 +48,7 @@ set_target_properties(cnn PROPERTIES
 target_link_libraries(cnn PRIVATE
     ${CUDA_LIBRARIES}
     ${TIFF_LIBRARIES}
-    nppc nppial nppig nppif cudart
+    cudart
 )
 
 # === Shared library target for Python ===
@@ -68,7 +68,7 @@ set_target_properties(cnn_shared PROPERTIES
 target_link_libraries(cnn_shared PRIVATE
     ${CUDA_LIBRARIES}
     ${TIFF_LIBRARIES}
-    nppc nppial nppig nppif cudart
+    cudart
 )
 
 # === Debug info ===
