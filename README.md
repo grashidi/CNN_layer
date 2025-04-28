@@ -29,7 +29,7 @@ pip install -r requirements.txt
 python autoencoder.py
 ```
 
-## Progress of encoder image quality after 10 epochs of training
+## Progress of encoder feature extraction after 10 epochs of training
 #### Original image
 <img src="doc/imgs/wash-ir.jpg" width="200">
 <table>
