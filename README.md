@@ -30,3 +30,35 @@ python autoencoder.py
 ```
 
 ## Progress of decoder reconstruction image quality after 10 epochs of training
+#### Original image
+<img src="doc/imgs/wash-ir.jpg" width="200">
+<table>
+  <tr>
+    <th>Epoch 1</th>
+    <th>Epoch 2</th>
+    <th>Epoch 3</th>
+    <th>Epoch 4</th>
+    <th>Epoch 5</th>
+  </tr>
+  <tr>
+    <td><img src="doc/imgs/epoch_0_wash-ir.jpg" width="200"></td>
+    <td><img src="doc/imgs/epoch_1_wash-ir.jpg" width="200"></td>
+    <td><img src="doc/imgs/epoch_2_wash-ir.jpg" width="200"></td>
+    <td><img src="doc/imgs/epoch_3_wash-ir.jpg" width="200"></td>
+    <td><img src="doc/imgs/epoch_4_wash-ir.jpg" width="200"></td>
+  </tr>
+  <tr>
+    <th>Epoch 6</th>
+    <th>Epoch 7</th>
+    <th>Epoch 8</th>
+    <th>Epoch 9</th>
+    <th>Epoch 10</th>
+  </tr>
+  <tr>
+    <td><img src="doc/imgs/epoch_5_wash-ir.jpg" width="200"></td>
+    <td><img src="doc/imgs/epoch_6_wash-ir.jpg" width="200"></td>
+    <td><img src="doc/imgs/epoch_7_wash-ir.jpg" width="200"></td>
+    <td><img src="doc/imgs/epoch_8_wash-ir.jpg" width="200"></td>
+    <td><img src="doc/imgs/epoch_9_wash-ir.jpg" width="200"></td>
+  </tr>
+</table>
