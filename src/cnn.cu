@@ -13,15 +13,15 @@
 
 namespace image_processing {
     
-    double ApplyConv2DKernelCuda(const std::vector<unsigned char>& image, 
-                                std::vector<unsigned char>& result, 
-                                uint32_t width, 
-                                uint32_t height,
-                                uint32_t poolWidth,
-                                uint32_t poolHeight,
-                                const std::vector<float>& kernelX, 
-                                const std::vector<float>& kernelY, 
-                                int kernel_size) {
+    double ApplyConv2DKernelCuda(const unsigned char* image, 
+                                 unsigned char*& result, 
+                                 uint32_t width, 
+                                 uint32_t height,
+                                 uint32_t poolWidth,
+                                 uint32_t poolHeight,
+                                 const float* kernelX, 
+                                 const float* kernelY, 
+                                 int kernel_size) {
         unsigned char* d_image = nullptr;
         unsigned char* d_result = nullptr;
         float* d_tmp = nullptr;
@@ -39,9 +39,9 @@ namespace image_processing {
         CUDA_CHECK(cudaMalloc(&d_kernelX, kernel_size_bytes));
         CUDA_CHECK(cudaMalloc(&d_kernelY, kernel_size_bytes));
 
-        CUDA_CHECK(cudaMemcpy(d_image, image.data(), image_size, cudaMemcpyHostToDevice));
-        CUDA_CHECK(cudaMemcpy(d_kernelX, kernelX.data(), kernel_size_bytes, cudaMemcpyHostToDevice));
-        CUDA_CHECK(cudaMemcpy(d_kernelY, kernelY.data(), kernel_size_bytes, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(d_image, image, image_size, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(d_kernelX, kernelX, kernel_size_bytes, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(d_kernelY, kernelY, kernel_size_bytes, cudaMemcpyHostToDevice));
 
         dim3 block_dim(kBlockSize, kBlockSize);
         dim3 grid_dim((width + kBlockSize - 1) / kBlockSize, (height + kBlockSize - 1) / kBlockSize);
@@ -54,7 +54,7 @@ namespace image_processing {
                             (kBlockSize + kernel_size - 1) * sizeof(unsigned char);
         }
 
-        std::cout << "Launching kenrnel with block size: " << kBlockSize << " and " << "grid size: " << (width + kBlockSize - 1) / kBlockSize << std::endl;
+//        std::cout << "Launching kenrnel with block size: " << kBlockSize << " and " << "grid size: " << (width + kBlockSize - 1) / kBlockSize << std::endl;
 
         auto start = std::chrono::high_resolution_clock::now();
         Conv2DKernel<<<grid_dim, block_dim, sharedMemSize>>>(d_image, d_tmp, width, height,
@@ -67,7 +67,7 @@ namespace image_processing {
         CUDA_CHECK(cudaGetLastError());
         CUDA_CHECK(cudaDeviceSynchronize());
 
-        CUDA_CHECK(cudaMemcpy(result.data(), d_result, result_size, cudaMemcpyDeviceToHost));
+        CUDA_CHECK(cudaMemcpy(result, d_result, result_size, cudaMemcpyDeviceToHost));
 
         cudaFree(d_image);
         cudaFree(d_tmp);
@@ -77,6 +77,78 @@ namespace image_processing {
 
         return std::chrono::duration<double>(end - start).count();
     }
+
+    double ApplyConv2DTransposeKernelCuda(const unsigned char* input,
+                                          unsigned char*& result,
+                                          uint32_t input_width,
+                                          uint32_t input_height,
+                                          const float* kernelX,
+                                          const float* kernelY,
+                                          int kernel_size) {
+        unsigned char* d_input = nullptr;
+        float *d_output1 = nullptr, *d_output2 = nullptr;
+        float *d_kernelX = nullptr, *d_kernelY = nullptr;
+
+        int output_width = (input_width - 1) * 2 + kernel_size;
+        int output_height = (input_height - 1) * 2 + kernel_size;;
+        size_t input_size = input_width * input_height * sizeof(unsigned char);
+        size_t output_size = output_width * output_height * sizeof(float);
+        size_t kernel_bytes = kernel_size * kernel_size * sizeof(float);
+
+        CUDA_CHECK(cudaMalloc(&d_input, input_size));
+        CUDA_CHECK(cudaMalloc(&d_output1, output_size));
+        CUDA_CHECK(cudaMalloc(&d_output2, output_size));
+        CUDA_CHECK(cudaMalloc(&d_kernelX, kernel_bytes));
+        CUDA_CHECK(cudaMalloc(&d_kernelY, kernel_bytes));
+
+        CUDA_CHECK(cudaMemcpy(d_input, input, input_size, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(d_kernelX, kernelX, kernel_bytes, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(d_kernelY, kernelY, kernel_bytes, cudaMemcpyHostToDevice));
+
+        CUDA_CHECK(cudaMemset(d_output1, 0, output_size));
+        CUDA_CHECK(cudaMemset(d_output2, 0, output_size));
+
+        dim3 block_dim(kBlockSize, kBlockSize);
+        dim3 grid_dim((input_width + kBlockSize - 1) / kBlockSize,
+                    (input_height + kBlockSize - 1) / kBlockSize);
+
+        auto start = std::chrono::high_resolution_clock::now();
+
+        Conv2DTransposeKernel<<<grid_dim, block_dim>>>(
+            d_input, d_output1, input_width, input_height, d_kernelX, kernel_size
+        );
+        Conv2DTransposeKernel<<<grid_dim, block_dim>>>(
+            d_input, d_output2, input_width, input_height, d_kernelY, kernel_size
+        );
+
+        auto end = std::chrono::high_resolution_clock::now();
+
+        CUDA_CHECK(cudaGetLastError());
+        CUDA_CHECK(cudaDeviceSynchronize());
+
+        // Allocate and download results
+        std::vector<float> h_out1(output_width * output_height);
+        std::vector<float> h_out2(output_width * output_height);
+//        result = new unsigned char[output_width * output_height];
+
+        CUDA_CHECK(cudaMemcpy(h_out1.data(), d_output1, output_size, cudaMemcpyDeviceToHost));
+        CUDA_CHECK(cudaMemcpy(h_out2.data(), d_output2, output_size, cudaMemcpyDeviceToHost));
+
+        for (size_t i = 0; i < h_out1.size(); ++i) {
+            float val = (h_out1[i] + h_out2[i]) / 2.0f;
+            val = fminf(fmaxf(val, 0.0f), 255.0f);  // Clamp
+            result[i] = static_cast<unsigned char>(val);
+        }
+
+        cudaFree(d_input);
+        cudaFree(d_output1);
+        cudaFree(d_output2);
+        cudaFree(d_kernelX);
+        cudaFree(d_kernelY);
+
+        return std::chrono::duration<double>(end - start).count();
+    }
+
 
     __global__ void Conv2DKernel(const unsigned char* image, 
                                  float* result, 
@@ -147,6 +219,39 @@ namespace image_processing {
             }
         }
     }
+
+    __global__ void Conv2DTransposeKernel(
+        const unsigned char* input,
+        float* output,
+        int input_width,
+        int input_height,
+        const float* kernel,
+        int kernel_size
+    ) {
+        int x = blockIdx.x * blockDim.x + threadIdx.x;
+        int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        if (x >= input_width || y >= input_height) return;
+
+        int stride = 2;
+
+        int out_w = (input_width - 1) * stride + kernel_size;
+        int out_h = (input_height - 1) * stride + kernel_size;
+
+        int in_idx = y * input_width + x;
+        float val = static_cast<float>(input[in_idx]);
+
+        for (int i = 0; i < kernel_size; ++i) {
+            for (int j = 0; j < kernel_size; ++j) {
+                int out_x = x * stride + j;
+                int out_y = y * stride + i;
+                if ((out_y * out_w + out_x) < (out_w * out_h)) {
+                    atomicAdd(&output[out_y * out_w + out_x], val * kernel[i * kernel_size + j]);
+                }
+            }
+        }
+    }
+
     
     __global__ void ReLUKernel(float* image, int width, int height) {
         int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -180,7 +285,7 @@ namespace image_processing {
         result[y * (width / poolWidth) + x] = static_cast<unsigned char>(maxVal);
     }
 
-    void GenerateSobelKernels(int size, std::vector<float>& kernelX, std::vector<float>& kernelY) {
+    void GenerateSobelKernels(int size, float*& kernelX, float*& kernelY) {
         // Ensure the size is odd (e.g., 3x3, 5x5, etc.)
         if (size % 2 == 0) {
             std::cerr << "Kernel size must be odd!" << std::endl;

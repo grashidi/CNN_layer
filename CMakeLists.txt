@@ -10,20 +10,16 @@ set(CMAKE_CUDA_COMPILER /opt/cuda/bin/nvcc)
 set(CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTOR /opt/cuda/include)
 set(CMAKE_CUDA_RUNTIME_LIBRARY /opt/cuda/lib/libcudart.so)
 
-# Enable CUDA debug information and optimization flags
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3 --use_fast_math")
-
-# Set CUDA file extensions
+# CUDA flags
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -g -G --use_fast_math")
 set(CMAKE_CUDA_SOURCE_PROPERTY_FORMAT OBJ)
-set_source_files_properties(src/cnn.cu PROPERTIES LANGUAGE CUDA)
+set(CMAKE_CUDA_ARCHITECTURES 50)
 
-set(CMAKE_CUDA_ARCHITECTURES 50)  # Target Compute Capability 5.0
-
-# Find required packages
+# Find packages
 find_package(CUDA REQUIRED)
 find_package(TIFF REQUIRED)
 
-# Print CUDA information
+# Print debug info
 message(STATUS "CUDA Compiler: ${CMAKE_CUDA_COMPILER}")
 message(STATUS "CUDA Include Directory: ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTOR}")
 message(STATUS "CUDA Libraries: ${CUDA_LIBRARIES}")
@@ -35,40 +31,47 @@ include_directories(
     inc
 )
 
-# Source files
-set(SOURCES
+# === Executable target (original) ===
+set(SOURCES_EXEC
     src/main.cc
     src/utils.cc
     src/cnn.cu
 )
 
-# Define the executable
-add_executable(cnn ${SOURCES})
-
-# Enable CUDA for the target
-set_target_properties(cnn PROPERTIES LINKER_LANGUAGE CUDA
+add_executable(cnn ${SOURCES_EXEC})
+set_target_properties(cnn PROPERTIES
+    LINKER_LANGUAGE CUDA
     CUDA_SEPARABLE_COMPILATION ON
     CUDA_RESOLVE_DEVICE_SYMBOLS ON
 )
 
-
-# Link directories
-link_directories(/opt/cuda/lib)
-
-# Link libraries
 target_link_libraries(cnn PRIVATE
     ${CUDA_LIBRARIES}
     ${TIFF_LIBRARIES}
-    nppc
-    nppial
-    nppig
-    nppif
-    cudart
+    nppc nppial nppig nppif cudart
 )
 
-# Print target properties
+# === Shared library target for Python ===
+set(SOURCES_SHARED
+    src/utils.cc
+    src/cnn.cu
+    src/cnn_interface.cc
+)
+
+add_library(cnn_shared SHARED ${SOURCES_SHARED})
+set_target_properties(cnn_shared PROPERTIES
+    LINKER_LANGUAGE CUDA
+    CUDA_SEPARABLE_COMPILATION ON
+    CUDA_RESOLVE_DEVICE_SYMBOLS ON
+)
+
+target_link_libraries(cnn_shared PRIVATE
+    ${CUDA_LIBRARIES}
+    ${TIFF_LIBRARIES}
+    nppc nppial nppig nppif cudart
+)
+
+# === Debug info ===
 get_target_property(CUDA_ENABLED cnn CUDA_ENABLED)
 message(STATUS "CUDA Enabled: ${CUDA_ENABLED}")
-
-# Print CUDA flags
 message(STATUS "CUDA Flags: ${CMAKE_CUDA_FLAGS}")

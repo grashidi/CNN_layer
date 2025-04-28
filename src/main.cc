@@ -7,7 +7,7 @@
 
 int main(int argc, char** argv) {
   if (argc < 3) {
-    std::cerr << "Usage: " << argv[0] << " <kernel_size> <image_path>" << std::endl;
+    std::cerr << "Usage: " << argv[0] << "<image_path> <kernel_size> <kernel_path>" << std::endl;
     return 1;
   }
 
@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
   std::string tmp = argv[2];
   const char* image_path = tmp.c_str();
 
-  std::vector<unsigned char> image;
+  unsigned char* image;
   uint32_t width, height;
   uint32_t poolWidth = 2, poolHeight = 2;
 
@@ -26,9 +26,10 @@ int main(int argc, char** argv) {
   uint32_t outWidth = static_cast<int>(width / poolWidth);
   uint32_t outHeight = static_cast<int>(height / poolHeight);
 
-  std::vector<unsigned char> processed_image(outWidth * outHeight);
-  std::vector<float> kernelX(kernel_size * kernel_size);
-  std::vector<float> kernelY(kernel_size * kernel_size);
+  unsigned char* processed_image = new unsigned char[outWidth * outHeight];
+
+  float* kernelX = new float[kernel_size * kernel_size];
+  float* kernelY = new float[kernel_size * kernel_size];
 
   image_processing::GenerateSobelKernels(kernel_size, kernelX, kernelY);
   double cuda_time = image_processing::ApplyConv2DKernelCuda(image,
@@ -48,6 +49,11 @@ int main(int argc, char** argv) {
   image_utils::SaveTiff(out_file.c_str(), processed_image, outWidth, outHeight);
 
   std::cout << kernel_size << "\t" << cuda_time << std::endl;
+
+  delete image;
+  delete processed_image;
+  delete kernelX;
+  delete kernelY;
 
   return 0;
 }

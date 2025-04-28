@@ -8,10 +8,10 @@
 namespace image_utils {
 
 // Loads a TIFF image from a file.
-bool LoadTiff(const char* filename, std::vector<uint8_t>& image, uint32_t& width, uint32_t& height);
+bool LoadTiff(const char* filename, uint8_t*& image, uint32_t& width, uint32_t& height);
 
 // Saves a grayscale image as a TIFF file.
-bool SaveTiff(const char* filename, const std::vector<uint8_t>& image, uint32_t width, uint32_t height);
+bool SaveTiff(const char* filename, const uint8_t* image, uint32_t width, uint32_t height);
 
 }  // namespace image_utils
 
